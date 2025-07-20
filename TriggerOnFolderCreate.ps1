@@ -78,7 +78,7 @@ $lista.Add($events)
 while ($events){
     sleep 3
     $bookmark = $events[-1].Bookmark
-    $events = Get-customEvents -logname "Security" -XMLfilter $filter -reversed $false -bookmark $bookmark
+    $events = Get-customEvents -logname "Microsoft-Windows-Sysmon/Operational" -XMLfilter $filter -reversed $false -bookmark $bookmark
     if($events){
         $events.ForEach({$lista.Add($_)})
     }
