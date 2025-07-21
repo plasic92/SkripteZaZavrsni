@@ -46,7 +46,23 @@ function Get-customEvents {
 
 }
 
+function Export-ADobjectsChangesToCSV {
+    param(
+        $fullPath,
+        $ADobjectCollection
+    )
+    if($ADobjectCollection){
+        $ADobjectCollection = $ADobjectCollection|ForEach-Object {$_}
+        $data = $ADobjectCollection|ConvertTo-csv  -Delimiter *
+        if(Test-Path -Path $fullPath){
+            $data[2..($data.Count -1)]|Out-File -Encoding utf8 -FilePath $fullPath -Append
+        }
+        else{
+            $data|Out-File -Encoding utf8 -FilePath $fullPath
+        }
+    }
 
+}
 
 #$RecordID = 267931
 
@@ -112,31 +128,6 @@ foreach($event in $eventi){
     }
 }
 
-if($GroupMemberOperationLista){
-    $ADGroupMemberChange = $GroupMemberOperationLista|ForEach-Object {$_}
-    $putanja1 = 'C:\Users\Administrator\Desktop\skripte\ADGroupMemberChange.csv'
-    $header1 = '"TimeReceived"*"TimeCreated"*"MemberName"*"MemberSid"*"TargetUserName"*"TargetSid"*"EventID"'
 
-    $data = $ADGroupMemberChange|ConvertTo-csv  -Delimiter *
-    if(Test-Path -Path $putanja1){
-       $data[2..($data.Count -1)]|Out-File -Encoding utf8 -FilePath $putanja1 -Append
-    }else{
-        $data|Out-File -Encoding utf8 -FilePath $putanja1
-    }
-}
-
-
-if($UserGroupOperationLista){
-    $ADUserGroupChange = $UserGroupOperationLista|ForEach-Object {$_}
-    $putanja2 = 'C:\Users\Administrator\Desktop\skripte\ADUserGroupChange.csv'
-    $header2 = '"TimeReceived"*"TimeCreated"*"TargetUserName"*"TargetSid"*"SubjectUserSid"*"SubjectUserName"*"EventID"'
-
-    $data = $ADUserGroupChange|ConvertTo-csv  -Delimiter *
-    if(Test-Path -Path $putanja2){
-       $data[2..($data.Count -1)]|Out-File -Encoding utf8 -FilePath $putanja2 -Append
-    }else{
-        $data|Out-File -Encoding utf8 -FilePath $putanja2
-    }
-}
-
-
+Export-ADobjectsChangesToCSV -fullPath 'C:\Users\Administrator\Desktop\skripte\ADGroupMemberChange.csv' -ADobjectCollection $GroupMemberOperationLista
+Export-ADobjectsChangesToCSV -fullPath 'C:\Users\Administrator\Desktop\skripte\ADUserGroupChange.csv' -ADobjectCollection $UserGroupOperationLista
