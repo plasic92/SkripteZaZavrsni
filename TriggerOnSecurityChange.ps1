@@ -1,33 +1,6 @@
-﻿param([int]$RecordID)
+param([int]$RecordID)
 
-function Get-ISO8601DateString  {
-    param(
-        [datetime]$datetime,
-        [switch]$qoutes
-    )
-    $data = $datetime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-    if($qoutes){
-        return Write-Output "'$data'"
-    else{return $data}
-    }
-}
 
-function Get-EventDataNameText {
-    param(
-        [System.Xml.XmlDocument]$XMLEventObjectDataName,
-        [string]$DataName,
-        [Switch]$qoutes
-    )
-    $filterBlock = {
-        $PSItem.Name -eq $DataName
-    }
-    $data = $XMLEventObjectDataName.event.EventData.Data.Where($filterBlock)."#text"
-    if($qoutes){
-        return Write-Output "'$data'"
-    }else{
-        return $data
-    }
-}
 
 function Get-customEvents {
     param(
@@ -46,37 +19,11 @@ function Get-customEvents {
 
 }
 
+function Write-customEvents {
+param(
+    $event4670
+)
 
-
-
-$filterObjectDeleted= @"
-<QueryList>
-  <Query Id="0" Path="Security">
-    <Select Path="Security">*[System[Provider[@Name='Microsoft-Windows-Security-Auditing'] and Task = 13570 and (EventID=4670)]]</Select>
-  </Query>
-</QueryList>
-"@
-
-try{
-$log = Get-WinEvent -LogName security -FilterXPath "*[System/EventRecordID=$RecordID]" -ErrorAction Stop
-}catch { $_|Out-File -FilePath 'C:\Users\Administrator.DOMENAZAPIS\Desktop\skripte\greska' -Encoding utf8}
-#$bookmark = $log.Bookmark
-
-$lista = [System.Collections.Generic.List[System.Diagnostics.Eventing.Reader.EventLogRecord]]::new()
-
-$events = $log
-$lista.Add($events)
-while ($events){
-    sleep 3
-    $bookmark = $events[-1].Bookmark
-    $events = Get-customEvents -logname "Security" -XMLfilter $filterObjectDeleted -reversed $false -bookmark $bookmark
-    if($events){
-        $events.ForEach({$lista.Add($_)})
-    }
-}
-
-#flat list
-$event4670 = $lista|ForEach-Object {$_}
 
 $customEventObject = foreach($event in $event4670){
     if($event.Properties[6].Value -match 'c:\\share'){
@@ -104,6 +51,32 @@ if(Test-Path -Path $putanja){
 }else{
     $data|Out-File -Encoding utf8 -FilePath $putanja
 }
+}
 
+
+
+$filterObjectDeleted= @"
+<QueryList>
+  <Query Id="0" Path="Security">
+    <Select Path="Security">*[System[Provider[@Name='Microsoft-Windows-Security-Auditing'] and Task = 13570 and (EventID=4670)]]</Select>
+  </Query>
+</QueryList>
+"@
+
+try{
+$log = Get-WinEvent -LogName security -FilterXPath "*[System/EventRecordID=$RecordID]" -ErrorAction Stop
+}catch { $_|Out-File -FilePath 'C:\Users\Administrator.DOMENAZAPIS\Desktop\skripte\greska' -Encoding utf8}
+
+
+
+$events = $log
+while ($events){
+    Write-customEvents -event4670 $events
+    $bookmark = $events[-1].Bookmark
+    $events = Get-customEvents -logname "Security" -XMLfilter $filterObjectDeleted -reversed $false -bookmark $bookmark
+    if($events){
+        sleep 3
+    }
+}
 
 
