@@ -1,33 +1,6 @@
-﻿param([int]$RecordID)
+param([int]$RecordID)
 
-function Get-ISO8601DateString  {
-    param(
-        [datetime]$datetime,
-        [switch]$qoutes
-    )
-    $data = $datetime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-    if($qoutes){
-        return Write-Output "'$data'"
-    else{return $data}
-    }
-}
 
-function Get-EventDataNameText {
-    param(
-        [System.Xml.XmlDocument]$XMLEventObjectDataName,
-        [string]$DataName,
-        [Switch]$qoutes
-    )
-    $filterBlock = {
-        $PSItem.Name -eq $DataName
-    }
-    $data = $XMLEventObjectDataName.event.EventData.Data.Where($filterBlock)."#text"
-    if($qoutes){
-        return Write-Output "'$data'"
-    }else{
-        return $data
-    }
-}
 
 function Get-customEvents {
     param(
@@ -64,40 +37,9 @@ function Export-ADobjectsChangesToCSV {
 
 }
 
-#$RecordID = 267931
-
-
-$filter= @"
-<QueryList>
-  <Query Id="0" Path="Security">
-    <Select Path="Security">*[System[(EventID=4727 or EventID=4728 or EventID=4729 or EventID=4730 or EventID=4731 or EventID=4732 or EventID=4733 or EventID=4734 or EventID=4735 or EventID=4754 or EventID=4756 or EventID=4757 or EventID=4758 or EventID=4720 or EventID=4722 or EventID=4725 or EventID=4726)]]</Select>
-  </Query>
-</QueryList>
-"@
-
-try{
-$log = Get-WinEvent -LogName security -FilterXPath "*[System/EventRecordID=$RecordID]" -ErrorAction Stop
-}catch { $_|Out-File -FilePath 'C:\Users\Administrator\Desktop\skripte\greska' -Encoding utf8}
-#$bookmark = $log.Bookmark
-
-$lista = [System.Collections.Generic.List[System.Diagnostics.Eventing.Reader.EventLogRecord]]::new()
-
-$events = $log
-$lista.Add($events)
-while ($events){
-    sleep 3
-    $bookmark = $events[-1].Bookmark
-    $events = Get-customEvents -logname "Security" -XMLfilter $filter -reversed $false -bookmark $bookmark
-    if($events){
-        $events.ForEach({$lista.Add($_)})
-    }
-}
-
-#flat list
+function Write-customADEvents {
+    param($eventi)
 $eventi = $lista|ForEach-Object {$_}
-
-
-
 $GroupMemberOperationLista = [System.Collections.Generic.List[object]]::new()
 $UserGroupOperationLista = [System.Collections.Generic.List[object]]::new()
 #operacija na group memberima i pripadajući eveti
@@ -131,3 +73,36 @@ foreach($event in $eventi){
 
 Export-ADobjectsChangesToCSV -fullPath 'C:\Users\Administrator\Desktop\skripte\ADGroupMemberChange.csv' -ADobjectCollection $GroupMemberOperationLista
 Export-ADobjectsChangesToCSV -fullPath 'C:\Users\Administrator\Desktop\skripte\ADUserGroupChange.csv' -ADobjectCollection $UserGroupOperationLista
+
+}
+
+#$RecordID = 267931
+
+
+try{
+$log = Get-WinEvent -LogName security -FilterXPath "*[System/EventRecordID=$RecordID]" -ErrorAction Stop
+}catch { $_|Out-File -FilePath 'C:\Users\Administrator\Desktop\skripte\greska' -Encoding utf8}
+$eventID = $log.id
+$filter= @"
+<QueryList>
+  <Query Id="0" Path="Security">
+    <Select Path="Security">*[System[(EventID=$eventID)]]</Select>
+  </Query>
+</QueryList>
+"@
+
+
+#$bookmark = $log.Bookmark
+
+#$lista = [System.Collections.Generic.List[System.Diagnostics.Eventing.Reader.EventLogRecord]]::new()
+
+$events = $log
+#$lista.Add($events)
+while ($events){
+    Write-customADEvents -eventi $events
+    $bookmark = $events[-1].Bookmark
+    $events = Get-customEvents -logname "Security" -XMLfilter $filter -reversed $false -bookmark $bookmark
+    if($events){
+        sleep 3
+    }
+}
